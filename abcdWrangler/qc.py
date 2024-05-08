@@ -51,7 +51,7 @@ def dmri_qc(df, motion_thresh=False):
     # head motion greater than 2mm FD on average = exclude
     dmri_mask *= df['imgincl_dmri_include'] == 1
     if motion_thresh:
-        dmri_mask *= df['dmri_rsi_meanmotion'] >= motion_thresh
+        dmri_mask *= df['dmri_meanmotion'] >= motion_thresh
     dmri_mask = np.invert(dmri_mask)
     return dmri_mask
 
