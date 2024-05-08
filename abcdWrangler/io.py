@@ -1,5 +1,13 @@
 import pandas as pd
-from os.path import exists, join
+from os.path import join, exists, dirname
+from pathlib import Path
+
+import importlib.resources
+DATADIR = join(dirname(__file__), 'data')
+#print(DATADIR)
+
+
+
 
 # read in data dictionary so people can grab variables without having to know where they live
 # inputs: variable names, eventnames
@@ -13,7 +21,7 @@ from os.path import exists, join
 
 def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
     '''
-    Tool for subsetting data from the larger ABCD Study dataset.
+    Function for subsetting data from the larger ABCD Study dataset.
     Parameters
     ----------
     data_dir : str
@@ -40,19 +48,25 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
         Dataframe: participants x variables. If `long=True`, and `eventname` is a list, 
         then `participants` are index level 0 and `eventname` is index level 1.
     '''
-    data_dict = pd.read_csv(PATH/TO/DICT)
+
+    data_path = join(DATADIR, 'data_dict-5_1.csv')
+    data_dict = pd.read_csv(data_path)
     if long and multiindex:
         index = ['src_subject_id', 'eventname']
-        cols = []
+        incl = []
     else:
         index = ['src_subject_id']
-        cols = ['eventname']
+        incl = ['eventname']
     if type(vars) == list:
         # read through data dictionary to get names of dataframes
         temp_dict = data_dict.copy()
         temp_dict.index = temp_dict['var_name']
-        intersection = list(set(temp_dict.index) & set(vars))
-        vars_of_interest = data_dict.loc[intersection]
+        intersection = list(set(temp_dict['var_name']) & set(vars))
+        #print(f'Found {intersection}.')
+        left_out = list(set(vars) - set(temp_dict['var_name']))
+        if len(left_out) > 0:
+            print(f"Didn't find {left_out}.")
+        vars_of_interest = temp_dict.loc[intersection]
         frames = vars_of_interest['table_name'].unique()
         mapping = {}
         for frame in frames:
@@ -60,26 +74,38 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
             mapping[frame] = list(temp.index)
     else:
         mapping = vars
+    #print(mapping)
     data_dict.index = data_dict['table_name']
     df = pd.DataFrame()
     for frame in mapping.keys():
-        cols += mapping[frame]
-        path = data_dict.loc[frame]['path']
-        frame_path = join(data_dir, path, f'{frame}.csv')
+        print(frame)
+        cols = mapping[frame]
+        path = data_dict.loc[frame]['rel_path'].unique()[0]
+        
+        frame_path = join(data_dir, path)
+        print(frame_path)
         assert exists(frame_path)
         temp2 = pd.read_csv(
             frame_path, 
             index_col=index, 
             header=0,
-            usecols= index + cols
+            usecols= index + cols + incl
             )
         if type(eventname) == list and len(eventname) > 1:
+            print("multiple timepoints")
             if long:
-                if multiindex:
-                    temp3 = temp2.xs(tuple(eventname), level=1)
-                else:
-                    temp3 = temp2[temp2['eventname'] == event]
-                    temp3['eventname'] = event
+                print("long format")
+                temp3 = pd.DataFrame()
+                for event in eventname:
+                    if multiindex:
+                        print("multiindex")
+                        temp4 = temp2.xs(event, level=1)
+                        temp4.index = pd.MultiIndex.from_product([temp4.index, [event]])
+                    else:
+                        print("not multiindex")
+                        temp4 = temp2[temp2['eventname'] == event]
+                        #temp4['eventname'] = event
+                    temp3 = pd.concat([temp3, temp4], axis=0)
                 df = pd.concat(
                     [
                         df, 
@@ -88,12 +114,13 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
                     axis=1
                 )
             else:
-                
                 for event in eventname:
                     temp3 = temp2[temp2['eventname'] == event]
                     if multiindex:
-                        temp3.columns = pd.MultiIndex.from_product([[event], [temp3.columns]])
+                        print("multiindex")
+                        temp3.columns = pd.MultiIndex.from_product([[event], temp3.columns])
                     else:
+                        print("not multiindex")
                         temp3.columns = [f'{i.event}' for i in temp3.columns]
                     df = pd.concat(
                         [
@@ -103,11 +130,12 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
                         axis=1
                     )
         else:
-            temp3 = temp2[temp2['eventname'] == event]
+            print("only one event")
+            temp3 = temp2[temp2['eventname'] == eventname]
             df = pd.concat(
                     [
                         df,
-                        temp3
+                        temp3.drop('eventname', axis=1)
                     ],
                     axis=1
                 )
