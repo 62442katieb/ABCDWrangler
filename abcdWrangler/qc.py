@@ -28,8 +28,9 @@ def smri_qc(df):
     # t1 quality for freesurfer ROI delineations
     # 1=include, 0=exclude
     smri_mask *= df['imgincl_t1w_include'] == 1
-    #ppts = smri_mask
-    return smri_mask
+    smri_mask = np.invert(smri_mask)
+    ppts = df.loc[smri_mask == True]
+    return ppts
 
 
 def dmri_qc(df, motion_thresh=False):
@@ -53,7 +54,8 @@ def dmri_qc(df, motion_thresh=False):
     if motion_thresh:
         dmri_mask *= df['dmri_meanmotion'] >= motion_thresh
     dmri_mask = np.invert(dmri_mask)
-    return dmri_mask
+    ppts = df.loc[dmri_mask == True]
+    return ppts
 
 def fmri_qc(df, ntpoints=500, motion_thresh=1):
     '''
@@ -67,4 +69,5 @@ def fmri_qc(df, ntpoints=500, motion_thresh=1):
     if motion_thresh:
         rsfmri_mask *= df['rsfmri_meanmotion'] <= motion_thresh
     rsfmri_mask = np.invert(rsfmri_mask)
-    return rsfmri_mask
+    ppts = df.loc[rsfmri_mask == True]
+    return ppts
