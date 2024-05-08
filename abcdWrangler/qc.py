@@ -29,7 +29,7 @@ def smri_qc(df):
     # 1=include, 0=exclude
     smri_mask *= df['imgincl_t1w_include'] == 1
     smri_mask = np.invert(smri_mask)
-    ppts = df.loc[smri_mask == True].index
+    #ppts = df.loc[smri_mask == True].index
     return ppts
 
 
@@ -52,22 +52,23 @@ def dmri_qc(df, motion_thresh=False):
     # head motion greater than 2mm FD on average = exclude
     dmri_mask *= df['imgincl_dmri_include'] == 1
     if motion_thresh:
-        dmri_mask *= df['dmri_meanmotion'] >= motion_thresh
-    dmri_mask = np.invert(dmri_mask)
+        dmri_mask *= df['dmri_meanmotion'] < motion_thresh
+    #dmri_mask = np.invert(dmri_mask)
     ppts = df.loc[dmri_mask == True].index
     return ppts
 
 def fmri_qc(df, ntpoints=500, motion_thresh=1):
     '''
     '''
-    rsfmri_mask = df['mrif_score'].between(1,2, inclusive='both')
-    rsfmri_mask *= df['imgincl_rsfmri_include'] == 1
+    rsfmri_mask = df['mrif_score'].between(1,2, inclusive='both') * df['imgincl_rsfmri_include'] == 1
     # iteratively build a mask using boolean ANDs 
     # included ppts meet all the specified criteria
     if ntpoints:
         rsfmri_mask *= df['rsfmri_ntpoints'] >= ntpoints
+        #rsfmri_mask *= rsfmri_mask2
     if motion_thresh:
-        rsfmri_mask *= df['rsfmri_meanmotion'] <= motion_thresh
-    rsfmri_mask = np.invert(rsfmri_mask)
+        rsfmri_mask *= df['rsfmri_meanmotion'] < motion_thresh
+        #rsfmri_mask *= rsfmri_mask2
+    #rsfmri_mask = np.invert(rsfmri_mask)
     ppts = df.loc[rsfmri_mask == True].index
     return ppts
