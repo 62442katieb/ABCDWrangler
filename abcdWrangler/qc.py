@@ -65,6 +65,6 @@ def fmri_qc(df, ntpoints=500, motion_thresh=1):
     if ntpoints:
         rsfmri_mask *= df['rsfmri_ntpoints'] >= ntpoints
     if motion_thresh:
-        rsfmri_mask *= df['rsfmri_meanmotion'] >= motion_thresh
+        rsfmri_mask *= df['rsfmri_meanmotion'] <= motion_thresh
     rsfmri_mask = np.invert(rsfmri_mask)
     return rsfmri_mask
