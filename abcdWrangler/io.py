@@ -27,9 +27,13 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
     data_dir : str
         Path to ABCD Study data: Top-level, in which `core` and/or `substudy` directories.
     vars : list or dict
-        Subject ID for which the networks will be calculated.
+        List of ABCD Study variable names OR dictionary of variables by dataframes. If list,
+        function will divine which dataframes the variables live in by querying the data dictionary.
     eventname : str or list
-        Session of data collection. If there's only one session, we'll find it.
+        Session of data collection. If there's only one session, then `long` and `multiindex` are skipped.
+        If there's more than one session, then the shape of the resulting dataframe is determined by
+        `long` and `multiindex`. Default: long DF with `eventname` column and no multiindexing (as in the
+        ABCD Study tabulated data files).
     long : bool
         Format of the dataset. Default: `True`, returning a dataframe that is indexed
         by participant and eventname. If `False`, returns a dataframe that is indexed
@@ -45,8 +49,8 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
     Returns
     -------
     df : Pandas dataframe
-        Dataframe: participants x variables. If `long=True`, and `eventname` is a list, 
-        then `participants` are index level 0 and `eventname` is index level 1.
+        Dataframe: participants x variables. Shape is determined by `long` and `multiindex` in the
+        event of multiple `eventname` entries (i.e., a list, data from multiple visits).
     '''
 
     data_path = join(DATADIR, 'data_dict-5_1.csv')
@@ -83,7 +87,7 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
         path = data_dict.loc[frame]['rel_path'].unique()[0]
         
         frame_path = join(data_dir, path)
-        print(frame_path)
+        print(f"Grabbing\n {cols}\nfrom\n{frame_path}")
         assert exists(frame_path)
         temp2 = pd.read_csv(
             frame_path, 
@@ -92,17 +96,20 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
             usecols= index + cols + incl
             )
         if type(eventname) == list and len(eventname) > 1:
-            print("multiple timepoints")
+            #print("multiple timepoints")
             if long:
-                print("long format")
+                #print("long format")
                 temp3 = pd.DataFrame()
                 for event in eventname:
+                    # I think I need to default to multiindex 
+                    # and then just switch it to flat index if 
+                    # multiindex=False -- to do later
                     if multiindex:
-                        print("multiindex")
+                        #print("multiindex")
                         temp4 = temp2.xs(event, level=1)
                         temp4.index = pd.MultiIndex.from_product([temp4.index, [event]])
                     else:
-                        print("not multiindex")
+                        #print("not multiindex")
                         temp4 = temp2[temp2['eventname'] == event]
                         #temp4['eventname'] = event
                     temp3 = pd.concat([temp3, temp4], axis=0)
@@ -117,11 +124,13 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
                 for event in eventname:
                     temp3 = temp2[temp2['eventname'] == event]
                     if multiindex:
-                        print("multiindex")
+                        #print("multiindex")
                         temp3.columns = pd.MultiIndex.from_product([[event], temp3.columns])
                     else:
-                        print("not multiindex")
-                        temp3.columns = [f'{i.event}' for i in temp3.columns]
+                        #print("not multiindex")
+                        temp3.columns = [f'{i}.{event}' for i in temp3.columns]
+                        event_cols = temp3.filter(like='eventname', axis=1).columns
+                        temp3 = temp3.drop(event_cols, axis=1)
                     df = pd.concat(
                         [
                             df,
@@ -130,7 +139,7 @@ def data_grabber(data_dir, vars, eventname, long=True, multiindex=False):
                         axis=1
                     )
         else:
-            print("only one event")
+            #print("only one event")
             temp3 = temp2[temp2['eventname'] == eventname]
             df = pd.concat(
                     [
