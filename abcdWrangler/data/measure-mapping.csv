@@ -1,0 +1,16 @@
+﻿variable,measure
+thick," cortical-thickness,"
+t1wcnt,cortical-gwcontrast
+area,cortical-area
+dtivol,volume
+vol,volume
+rsirnd,RND
+rsirndgm,RND
+rsirni,RNI
+rsirnigm,RNI
+var,BOLD-variance
+dtivol,volume
+dtifa,FA
+dtimd,MD
+dtild,LD
+dtitd,TD
