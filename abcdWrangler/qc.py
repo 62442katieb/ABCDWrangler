@@ -9,6 +9,11 @@ mri_motion = 'mri_y_qc_motion'
 mri_includ = 'mri_y_qc_incl'
 mri_findin = 'mri_y_qc_clfind'
 
+'''
+Build-in print functions to describe the excluded participants -- 
+bonus points for exporting the demographics of included vs. excluded
+If I can get a handle on graphs, maybe we can automate the ppt inclusion flowchart
+'''
 
 def smri_qc(df):
     '''
