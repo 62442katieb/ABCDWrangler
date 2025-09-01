@@ -632,3 +632,116 @@ def series_2_corrmat(series, networks=None, array=True):
     else:
         corrmat = pd.DataFrame(data=corrmat, index=networks, columns=networks)
     return corrmat
+
+
+def plot_3d(data, subcortical=False, path_to_save=None, colors_specified=None, thresholds=None):
+    """
+    Plot cortical (Desikan-Killiany parcellation) or subcortical brain maps.
+
+    Parameters:
+    -----------
+    data : pandas.Series or similar
+        A 1D array-like containing regional values. Should have either:
+        - 19 subcortical regions (if `subcortical=True`), or
+        - 68 cortical regions (if `subcortical=False`).
+    
+    subcortical : bool, default False
+        If True, plots subcortical regions after dropping cerebellum and brainstem.
+        Otherwise, plots cortical regions.
+
+    path_to_save : str or None, optional
+        File path to save the generated plot image. If None, the plot is not saved.
+
+    colors_specified : None, str, or list/tuple of 3 colors, optional
+        Specifies the colormap to use for plotting.
+        - If None (default), uses the `'RdBu_r'` colormap.
+        - If a string, must be one of the predefined colormaps supported by the toolbox.
+        - If a list or tuple, must contain exactly 3 valid color specifications (e.g., color names or hex strings).
+          A custom diverging colormap will be created from these three colors.
+    
+    thresholds : tuple or list of two numbers (int or float), optional
+        Color value range for the colormap (low, high).
+        If None (default), uses the minimum and maximum of the data.
+
+    Returns:
+    --------
+    plot : The generated plot object.
+
+    Raises:
+    -------
+    ValueError
+        - If the input data length does not match expected number of regions.
+        - If `colors_specified` is not None, a supported string, or a list/tuple of exactly 3 colors.
+        - If a string colormap provided is not in the predefined list.
+    TypeError
+        - If `thresholds` is provided but its first two elements are not numeric.
+    RuntimeError
+        If reordering of subcortical data fails.
+    """
+    predefined_cmaps = ['viridis', 'viridis_r', 'inferno', 'inferno_r',
+                             'plasma', 'plasma_r', 'Blues', 'Blues_r', 'Reds',
+                             'Reds_r', 'cividis', 'cividis_r', 'RdBu', 'RdBu_r']
+    
+    if colors_specified == None:
+        color_map = 'RdBu_r' #set Red-Blue reversed as default
+    elif isinstance(colors_specified, str):
+        if colors_specified not in predefined_cmaps:
+            raise ValueError(f"Colormap '{colors_specified}' is not supported.")
+        color_map = colors_specified
+    elif isinstance(colors_specified, (list, tuple)) and len(colors_specified) == 3:
+        color_map = LinearSegmentedColormap.from_list("custom_diverging", colors_specified)
+    else:
+        raise ValueError("colors_specified must be a string colormap name or list of exactly 3 colors.")
+    
+    # set thresholds for plotting
+    if thresholds == None:
+        low_thresh = data.min()
+        high_thresh = data.max()
+    else:
+        # make sure that both elements are numbers first
+        if not (isinstance(thresholds[0], (int, float)) and isinstance(thresholds[1], (int, float))):
+            raise TypeError("First two elements are not numbers")
+        low_thresh = thresholds[0]
+        high_thresh = thresholds[1]
+
+    if subcortical:
+        # check that data has 19 regions
+        expected_regions = 19
+        if len(data) != expected_regions:  # +3 for cerebellum and brainstem to drop
+            raise ValueError(f"Expected {expected_regions} subcortical regions (including cerebellum and brainstem), got {len(data)}")
+
+        # first drop the cerebellum and brainstem
+        subcortical_data = data.drop(labels=['smri_vol_scs_crbcortexlh', 'smri_vol_scs_crbcortexrh', 'smri_vol_scs_bstem'])
+        subcortical_df = subcortical_data.to_frame().T # convert to df, needed for reordering function
+         # ensure correct order for plotting
+        try:
+            subcortical_reordered = reorder_sctx(subcortical_df)
+        except Exception as e:
+            raise RuntimeError(f"Failed to reorder subcortical data: {e}")
+        
+        plot = plot_subcortical(array_name=subcortical_reordered.values, 
+                                size=(800, 400), cmap=color_map, color_bar=True,
+                                embed_nb=True, color_range=(low_thresh, high_thresh))
+        print("Plot type:", type(plot))
+
+    # if not specified to be subcortical, then assume 68 DK regions
+    else:
+        # check that we have 68 areas 
+        expected_regions = 68
+        if len(data) != expected_regions:
+            raise ValueError(f"Expected {expected_regions} cortical regions, got {len(data)}")
+
+        data_fsa5 = parcel_to_surface(data, 'aparc_fsa5') # convert to fsaverage5
+
+        plot = plot_cortical(array_name=data_fsa5, surface_name="fsa5", size=(800, 400),
+                    cmap=color_map, color_bar=True, embed_nb=True, 
+                    color_range=(low_thresh, high_thresh))
+        
+    # if path is given, save the plot 
+    if path_to_save:
+        print("Saving figure to: ", path_to_save)
+        # save figure
+        with open(path_to_save, "wb") as f:
+            f.write(plot.data)
+
+    return plot 
