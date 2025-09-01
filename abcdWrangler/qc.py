@@ -47,16 +47,17 @@ def smri_qc(df):
 
 def dmri_qc(df, motion_thresh=False):
     '''
-    Function for subsetting data from the larger ABCD Study dataset.
+    Function for identifying participants with sufficient-quality diffusion MRI scans data from the larger ABCD Study dataset.
     Parameters
     ----------
     df : Pandas dataframe
-        Dataframe including at least `imgincl_t1w_include` variable, with participants (and eventnames, where applicable) as rows indices
+        Dataframe including at least `imgincl_dmri_include` variable, with participants (and eventnames, where applicable) as rows indices
+    motion_thresh : float
+        Motion threshold (framewise displacement, in milimeters) -- maximum average framewise displacement allowable across scan.
     Returns
     -------
-    ppts : list
-        Dataframe: participants x variables. If `long=True`, and `eventname` is a list, 
-        then `participants` are index level 0 and `eventname` is index level 1.
+    ppts : Pandas dataframe
+        Indices of participants within sufficient-quality diffusion MRI data.
     '''
     mrif_columns = df.filter(like='mrif_score').columns
     # t1 quality for freesurfer ROI delineations
@@ -80,13 +81,72 @@ def dmri_qc(df, motion_thresh=False):
     ppts = df.loc[dmri_mask == True].index
     return ppts
 
-def fmri_qc(df, ntpoints=None, motion_thresh=1):
+def rsfmri_qc(df, ntpoints=None, motion_thresh=1):
     '''
+    Function for identifying participants with sufficient-quality functional MRI scans data from the larger ABCD Study dataset.
+    Parameters
+    ----------
+    df : Pandas dataframe
+        Dataframe including at least `imgincl_rsfmri_include` variable, with participants (and eventnames, where applicable) as rows indices
+    ntpoints : int
+        Minimum number of low-motion timepoints. TR=800ms
+    motion_thresh : float
+        Motion threshold (framewise displacement, in milimeters) -- maximum average framewise displacement allowable across scan.
+    Returns
+    -------
+    ppts : list
+        Dataframe: participants x variables. If `long=True`, and `eventname` is a list, 
+        then `participants` are index level 0 and `eventname` is index level 1.
     '''
     mrif_columns = df.filter(like='mrif_score').columns
     # t1 quality for freesurfer ROI delineations
     # 1=include, 0=exclude
     incl_columns = df.filter(like='imgincl_rsfmri_include').columns
+    fmri_mask = df[mrif_columns[0]].between(1,2, inclusive='both')
+    fmri_mask *= df[incl_columns[0]] == 1
+    if len(mrif_columns) > 1:
+        for col in mrif_columns[1:]:
+            fmri_mask *= df[col].between(1,2, inclusive='both')
+    if len(incl_columns) > 1:
+        for col in incl_columns[1:]:
+            fmri_mask *= df[col] == 1
+    if motion_thresh:
+        motion_columns = df.filter(like='rsfmri_meanmotion').columns
+        fmri_mask *= df[motion_columns[0]] < motion_thresh
+        if len(motion_columns) > 1:
+            for col in motion_columns[1:]:
+                fmri_mask *= df[col] < motion_thresh
+    if ntpoints:
+        tr_columns = df.filter(like='rsfmri_ntpoints').columns
+        fmri_mask *= df[tr_columns[0]] >= ntpoints
+        if len(tr_columns) > 1:
+            for col in tr_columns[1:]:
+                fmri_mask *= df[col] >= ntpoints
+    ppts = df.loc[fmri_mask == True].index
+    return ppts
+
+def tfmri_qc(df, motion_thresh=1):
+    '''
+    Function for identifying participants with sufficient-quality functional MRI scans data from the larger ABCD Study dataset.
+    Parameters
+    ----------
+    df : Pandas dataframe
+        Dataframe including at least `imgincl_rsfmri_include` variable, with participants (and eventnames, where applicable) as rows indices
+    motion_thresh : float
+        Motion threshold (framewise displacement, in milimeters) -- maximum average framewise displacement allowable across scan.
+    task : str
+        Specifies functional MRI paradigm, one of `["mid", "sst", "nback"]
+    Returns
+    -------
+    ppts : list
+        Dataframe: participants x variables. If `long=True`, and `eventname` is a list, 
+        then `participants` are index level 0 and `eventname` is index level 1.
+    '''
+    imgincl_var = f'imgincl_{task}_include'
+    mrif_columns = df.filter(like='mrif_score').columns
+    # t1 quality for freesurfer ROI delineations
+    # 1=include, 0=exclude
+    incl_columns = df.filter(like=imgincl_var).columns
     fmri_mask = df[mrif_columns[0]].between(1,2, inclusive='both')
     fmri_mask *= df[incl_columns[0]] == 1
     if len(mrif_columns) > 1:
