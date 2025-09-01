@@ -9,7 +9,13 @@ from os.path import join
 from nilearn import plotting, surface, datasets, image
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from matplotlib.colors import LinearSegmentedColormap
 #import matplotlib as mpl
+
+from enigmatoolbox.plotting import plot_cortical
+from enigmatoolbox.utils.parcellation import parcel_to_surface
+from enigmatoolbox.plotting import plot_subcortical
+from enigmatoolbox.utils.useful import reorder_sctx
 
 from urllib.request import urlretrieve
 
