@@ -15,12 +15,13 @@ This is a package for various data science and visualization tools for use with 
   ```
 This module provides functions for identifying participants with sufficient quality data based on quality control flags and motion thresholds. It supports structural, diffusion-weighted and functional MRI data. It also inlcudes a helper function to randomly select a subject per family to avoid family-dependencies in the analysis. 
 
-Input 
+*Input* 
 All function require a pandas dataframe 
 
-Output 
+*Output* 
 All functions output a dataframe with the participants that have usable quality data. 
 
-Example usage 
+*Example usage*
+a
 
 
