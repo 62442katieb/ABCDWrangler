@@ -22,14 +22,14 @@ This module provides functions that allow users to identify participants with us
 ``one_ppt_per_fam(family_dat)``: Randomly selects one participant per family for statistical independence
 
 **Example Usage** \
-``
+```
 from qc import smri_qc, dmri_qc, fmri_qc, one_ppt_per_fam \\
 
 usable_smri = smri_qc(df)\
 usable_dmri = dmri_qc(df, motion_thresh=0.3) \
 usable_fmri = fmri_qc(df, ntpoints=400, motion_thresh=0.5) \
 independent_sample = one_ppt_per_fam(df[['rel_family_id']])
-``
+```
 
 
 
