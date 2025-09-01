@@ -21,7 +21,7 @@ This module provides functions that allow users to identify participants with us
 ``fmri_qc(df, ntpoints=None, motion_thresh=1)``: Selects participants with usable fMRI data, based on motion and timepoints \
 ``one_ppt_per_fam(family_dat)``: Randomly selects one participant per family for statistical independence
 
-**Example Usage** \
+**Example Usage** 
 ```
 from qc import smri_qc, dmri_qc, fmri_qc, one_ppt_per_fam \\
 
